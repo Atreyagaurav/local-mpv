@@ -12,3 +12,4 @@ clap = { version = "4.5.7", features = ["derive"] }
 fast_qr = "0.12.5"
 if-addrs = "0.12.0"
 libmpv = { path = "libmpv-rs"}
+url = "2.5.1"

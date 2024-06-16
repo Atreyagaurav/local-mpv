@@ -3,15 +3,125 @@
     <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Hello, world!</title>
+	<title>Wait MPV Controls</title>
     </head>
     <body>
-	Hello, world!
+	<!-- Media Player Control -->
+	<div class="media-player-control">
+	    <div class="controls">
+		<button class="control-button" id="previous-button"><i class="fa fa-step-backward"></i></button>
+		<button class="control-button" id="pause-button"><i class="fa fa-pause"></i></button>
+		<button class="control-button" id="play-button"><i class="fa fa-play"></i></button>
+		<button class="control-button" id="next-button"><i class="fa fa-step-forward"></i></button>
+		<button class="control-button" id="refresh-button"><i class="fa fa-refresh"></i></button>
+	    </div>
+	    
+	    <div class="currently-playing">
+		Currently playing: <span id="current-song"></span>
+	    </div>
 
-	<form action="" method="post">
-	    <button name="pause" value="true">Pause</button>
-	    <button name="unpause" value="true">UnPause</button>
-	</form>
+	    
+	    <div class="playlist">
+		URL:  <input type="text" id="media-url">
+		
+		<button class="control-button" id="append-button">Append</button>
+		<button class="control-button" id="replace-button">Replace</button>
+	    </div>
+	</div>
+
+	<!-- Style the media player control -->
+	<style>
+	 .media-player-control {
+	     height: 50px;
+	     background-color: #333;
+	     border-radius: 5px;
+	     box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
+	     padding: 10px;
+	 }
+	 .controls {
+	     display: flex;
+	     justify-content: space-between;
+	     align-items: center;
+	 }
+	 .control-button {
+	     background-color: #333;
+	     border: none;
+	     padding: 5px;
+	     font-size: 18px;
+	     cursor: pointer;
+	 }
+	 .control-button:hover {
+	     background-color: #444;
+	 }
+	 .currently-playing {
+	     margin-top: 10px;
+	     font-size: 16px;
+	     color: #999;
+	 }
+	</style>
+
+	<!-- Add some media player control icons -->
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+
+	<!-- Initialize the media player control -->
+	<script>
+	 document.getElementById('previous-button').addEventListener('click', () => {
+	     // Skip to the next song in the playlist
+	     fetch("/prev", {
+		 method: "post"
+	     }).then(res => {
+		 updateCurrentSong()
+	     })
+	 });
+	 document.getElementById('pause-button').addEventListener('click', () => {
+	     fetch("/pause", {
+		 method: "post"
+	     })
+	 });
+	 document.getElementById('play-button').addEventListener('click', () => {
+	     fetch("/play", {
+		 method: "post"
+	     })
+	 });
+	 document.getElementById('next-button').addEventListener('click', () => {
+	     // Skip to the next song in the playlist
+	     fetch("/next", {
+		 method: "post"
+	     }).then(res => {
+		 updateCurrentSong()
+	     })
+	 });
+	 document.getElementById('append-button').addEventListener('click', () => {
+	     var url = document.getElementById("media-url").value;
+	     // Skip to the next song in the playlist
+	     fetch("/append?url="+url, {
+		 method: "post"
+	     }).then(res => {
+		 updateCurrentSong()
+	     })
+	 });
+	 document.getElementById('replace-button').addEventListener('click', () => {
+	     var url = document.getElementById("media-url").value;
+	     // Skip to the next song in the playlist
+	     fetch("/replace?url="+url, {
+		 method: "post"
+	     }).then(res => {
+		 updateCurrentSong()
+	     })
+	 });
+	 document.getElementById('refresh-button').addEventListener('click', () => {
+	     updateCurrentSong()
+	 });
+	 // Update the display text with the currently playing song
+	 function updateCurrentSong() {
+	     fetch("/get-title", {
+		 method: "post"
+	     }).then((res) => res.text()).then((text) => {
+		 document.getElementById('current-song').textContent = text
+	     })
+	 }
+	 updateCurrentSong()
+	</script>
 
     </body>
 </html>

@@ -11,6 +11,9 @@ use libmpv::{events::Event, FileState, Mpv};
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
+    /// track clipboard contents to play media
+    #[arg(short, long)]
+    clipboard: bool,
     /// run mpv in loop mode
     #[arg(short, long)]
     r#loop: bool,
@@ -29,6 +32,9 @@ struct Args {
     /// Run the server in the given port
     #[arg(short, long, default_value = "6780")]
     port: u16,
+    /// Display QR code for URL
+    #[arg(short, long, requires = "server")]
+    qr: bool,
 
     /// Any args to pass to mpv
     #[arg(num_args(0..), last(true))]
@@ -39,19 +45,6 @@ fn main() -> libmpv::Result<()> {
     let args = Args::parse();
     let mut ctx = Clipboard::new().unwrap();
     let mut clip_txt = ctx.get_text().unwrap_or_else(|_| String::from(""));
-
-    if args.server {
-        let addr = if_addrs::get_if_addrs()
-            .unwrap()
-            .into_iter()
-            .map(|a| a.ip())
-            .filter(|a| a.is_ipv4() && !a.to_string().contains("127.0.0.1"))
-            .next()
-            .unwrap();
-        let addr = format!("http://{addr}:{}", args.port);
-        println!("{}", addr);
-        fast_qr::QRBuilder::new(addr).build().unwrap().print();
-    }
 
     let mpv = Mpv::new()?;
     mpv.set_property("idle", "yes")?;
@@ -73,26 +66,33 @@ fn main() -> libmpv::Result<()> {
     let mut ev_ctx = mpv.create_event_context();
 
     std::thread::scope(|s| {
-        s.spawn(|| loop {
-            let clip_new = ctx.get_text().unwrap_or_else(|_| String::from(""));
+        if args.clipboard {
+            s.spawn(|| loop {
+                let clip_new = ctx.get_text().unwrap_or_else(|_| String::from(""));
 
-            if clip_new != clip_txt {
-                println!("{}", clip_new);
-                mpv.playlist_load_files(&[(
-                    &clip_new,
-                    if args.append {
-                        FileState::AppendPlay
-                    } else {
-                        FileState::Replace
-                    },
-                    None,
-                )])
-                .unwrap();
-                mpv.unpause().ok();
-                clip_txt = clip_new;
-            }
-            std::thread::sleep(std::time::Duration::from_millis(100));
-        });
+                if clip_new != clip_txt {
+                    // let url = url::Url::parse(&clip_new);
+                    // println!("{:?}", url);
+                    // // url fails on file path, Path::from never fails
+                    // if url.is_ok() {
+                    println!("{}", clip_new);
+                    mpv.playlist_load_files(&[(
+                        &clip_new,
+                        if args.append {
+                            FileState::AppendPlay
+                        } else {
+                            FileState::Replace
+                        },
+                        None,
+                    )])
+                    .unwrap();
+                    mpv.unpause().ok();
+                    // }
+                    clip_txt = clip_new;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(100));
+            });
+        }
 
         s.spawn(|| loop {
             let ev = ev_ctx.wait_event(600.).unwrap_or(Err(libmpv::Error::Null));
@@ -106,7 +106,19 @@ fn main() -> libmpv::Result<()> {
 
         if args.server {
             s.spawn(|| {
-                let endpoint = format!("127.0.0.1:{}", args.port);
+                let addr = if_addrs::get_if_addrs()
+                    .unwrap()
+                    .into_iter()
+                    .map(|a| a.ip())
+                    .filter(|a| a.is_ipv4() && !a.to_string().contains("127.0.0.1"))
+                    .next()
+                    .unwrap();
+                let hp_addr = format!("http://{addr}:{}", args.port);
+                println!("{}", hp_addr);
+                if args.qr {
+                    fast_qr::QRBuilder::new(hp_addr).build().unwrap().print();
+                }
+                let endpoint = format!("{addr}:{}", args.port);
                 let listener = TcpListener::bind(endpoint).unwrap();
                 for incoming_stream in listener.incoming() {
                     let mut stream = incoming_stream.unwrap();
@@ -136,20 +148,47 @@ fn handle_connection(stream: &mut TcpStream, mpv: &Mpv) {
             .to_string();
         serve_requested_file(&filepath, stream);
     } else if request_str.starts_with("POST") {
-        handle_mpv_command(stream, &request_str, mpv);
+        let path = request_str
+            .split_whitespace()
+            .nth(1)
+            .unwrap_or("/")
+            .to_string();
+        handle_mpv_command(stream, path, mpv);
     }
 }
 
-fn handle_mpv_command(stream: &mut TcpStream, request_str: &str, mpv: &Mpv) {
-    // let response = "HTTP/1.1 200 OK\r\n\r\n";
-    // stream.write(response.as_bytes()).unwrap();
-    // stream.flush().unwrap();
-    if request_str.contains("pause=true") {
-        mpv.pause().unwrap();
-    }
-    if request_str.contains("unpause=true") {
-        mpv.unpause().unwrap();
-    }
+fn handle_mpv_command(stream: &mut TcpStream, path: String, mpv: &Mpv) {
+    // to stop from RelativeUrlwithoutBase
+    let url = url::Url::parse(&format!("rel:{}", path)).unwrap();
+    let command = &url.path()[1..];
+    match command {
+        "pause" => mpv.pause().unwrap(),
+        "play" => mpv.unpause().unwrap(),
+        "next" => mpv.playlist_next_force().unwrap(),
+        "prev" => mpv.playlist_previous_force().unwrap(),
+        "get-title" => {
+            if let Ok(title) = mpv.get_property::<String>("media-title") {
+                serve_requested_text(&title, stream)
+            } else {
+                serve_requested_text("<NA>", stream)
+            }
+        }
+        "append" => {
+            if let Some(media) = url.query_pairs().filter(|(k, _)| k == "url").next() {
+                println!("{}", media.1);
+                mpv.playlist_load_files(&[(&media.1, FileState::AppendPlay, None)])
+                    .unwrap();
+            }
+        }
+        "replace" => {
+            if let Some(media) = url.query_pairs().filter(|(k, _)| k == "url").next() {
+                println!("{}", media.1);
+                mpv.playlist_load_files(&[(&media.1, FileState::Replace, None)])
+                    .unwrap();
+            }
+        }
+        _ => (),
+    };
     serve_requested_file("/", stream);
 }
 
@@ -180,6 +219,18 @@ fn serve_requested_file(file_path: &str, stream: &mut TcpStream) {
         }
     };
 
+    // Send the response over the TCP stream
+    stream.write(response.as_bytes()).unwrap();
+    stream.flush().unwrap();
+}
+
+fn serve_requested_text(contents: &str, stream: &mut TcpStream) {
+    // Generate the HTTP response
+    let response = format!(
+        "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{}",
+        contents.len(),
+        contents
+    );
     // Send the response over the TCP stream
     stream.write(response.as_bytes()).unwrap();
     stream.flush().unwrap();
