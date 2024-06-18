@@ -6,48 +6,131 @@
 	<title>Wait MPV Controls</title>
     </head>
     <body>
-	<!-- Media Player Control -->
-	<div class="media-player-control">
-	    <div class="controls">
-		<button class="control-button" id="previous-button"><i class="fa fa-step-backward"></i></button>
-		<button class="control-button" id="pause-button"><i class="fa fa-pause"></i></button>
-		<button class="control-button" id="play-button"><i class="fa fa-play"></i></button>
-		<button class="control-button" id="next-button"><i class="fa fa-step-forward"></i></button>
-		<button class="control-button" id="refresh-button"><i class="fa fa-refresh"></i></button>
-	    </div>
-	    
-	    <div class="currently-playing">
-		Currently playing: <span id="current-song"></span>
+	<div class="container">
+	    <div class="playlist-control">
+		Add your URL:  <input type="text" id="media-url">
+		
+		<div class="controls">
+		    <button class="control-button" id="append-button"><i class="fa fa-plus"></i> Append</button>
+		    <button class="control-button" id="replace-button"><i class="fa fa-exchange-alt"></i> Replace</button>
+		    <!-- <button class="control-button" id="clipboard-button"><i class="fa fa-clipboard"></i> Paste</button> -->
+		</div>
 	    </div>
 
-	    
-	    <div class="playlist">
-		URL:  <input type="text" id="media-url">
+	    <div class="currently-playing">
+		Current Playlist:<br/>
+		<div class="playlist" id="media-playlist">
+		</div>
 		
-		<button class="control-button" id="append-button">Append</button>
-		<button class="control-button" id="replace-button">Replace</button>
+		<div class="controls">
+		    <button class="control-button" id="clear-button"><i class="fa fa-redo"></i> Reset</button>
+		    <button class="control-button" id="peek-button"><i class="fa fa-eye"></i> Peek</button>
+		</div>
+	    </div>
+
+	    <!-- Media Player Control -->
+	    <div class="media-player-control">
+		<p class="media-name">
+		    <span id="current-song"></span>
+		</p>
+		<div class="time-info" style="text-align:left;">
+		    <span id="current-song-time"></span>
+		    <span style="float:right;" id="current-song-duration"></span>
+		</div>
+		<div class="progress-bar">
+		    <div id="progress"></div>
+		</div>
+		<div class="controls-main">
+		    <button class="control-button-main" id="previous-button"><i class="fa fa-step-backward"></i></button>
+		    <button class="control-button-main" id="playpause-button"><img src="playpause.svg" height="60"></button>
+		    <button class="control-button-main" id="next-button"><i class="fa fa-step-forward"></i></button>
+		</div>
+		<div class="controls">
+		    <button class="control-button" id="backward-button"><i class="fa fa-backward"></i></button>
+		    <button class="control-button" id="pause-button"><i class="fa fa-pause"></i></button>
+		    <button class="control-button" id="play-button"><i class="fa fa-play"></i></button>
+		    <button class="control-button" id="forward-button"><i class="fa fa-forward"></i></button>
+		</div>
 	    </div>
 	</div>
-
+	
 	<!-- Style the media player control -->
 	<style>
-	 .media-player-control {
-	     height: 50px;
-	     background-color: #333;
-	     border-radius: 5px;
-	     box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
+	 html, body {
+	     height: 100%;
+	     margin: 0px;
+	 }
+	 input {
+	     box-sizing: border-box;
+	     width: 100%;
+	 }
+
+	 .container {
+	     max-width: 500px;
+	     height: 100%;
+	     position: relative;
+	     margin-left: auto;
+	     margin-right: auto;
+	 }
+	 .playlist-control{
 	     padding: 10px;
+	 }
+	 .currently-playing{
+	     padding: 10px;
+	 }
+	 .media-player-control {
+	     background-color: #333;
+	     box-shadow: 0px 0px 5px rgba(0,0,0,0.2);
+	     padding: 0px;
+	     width: 100%;
+	     position: absolute;
+	     bottom: 10px;
+	 }
+	 .playlist {
+	     width: 100%;
+	     height: 200px;
+	     border: 1px dotted #0313fc;
+	     color: #bae;
+	     overflow: scroll;
 	 }
 	 .controls {
 	     display: flex;
 	     justify-content: space-between;
 	     align-items: center;
+	     width: 90%;
+	     margin-left: auto;
+	     margin-right: auto;
+	 }
+	 .time-info {
+	     width: 95%;
+	     margin-left: auto;
+	     margin-right: auto;
+	 }
+	 .controls-main {
+	     display: flex;
+	     justify-content: space-between;
+	     align-items: center;
+	     text-align: center;
+	     width: 60%;
+	     margin-left: auto;
+	     margin-right: auto;
+	 }
+	 .media-name{
+	     font-size: 20px;
+	     padding: 10px;
 	 }
 	 .control-button {
 	     background-color: #333;
 	     border: none;
 	     padding: 5px;
 	     font-size: 18px;
+	     cursor: pointer;
+	 }
+	 .control-button-main {
+	     background-color: #333;
+	     border: none;
+	     padding: 7px;
+	     font-size: 24px;
 	     cursor: pointer;
 	 }
 	 .control-button:hover {
@@ -57,6 +140,23 @@
 	     margin-top: 10px;
 	     font-size: 16px;
 	     color: #999;
+	 }
+	 .progress-bar {
+	     background-color: #ccc;
+	     height: 10px;
+	     margin-top: 10px;
+	     overflow: hidden;
+	     position: relative;
+	     width: 100%;
+	 }
+
+	 #progress {
+	     background-color: #4CAF50;
+	     height: 10px;
+	     position: absolute;
+	     top: 0;
+	     left: 0;
+	     width: 0%;
 	 }
 	</style>
 
@@ -73,6 +173,11 @@
 		 updateCurrentSong()
 	     })
 	 });
+	 document.getElementById('playpause-button').addEventListener('click', () => {
+	     fetch("/playpause", {
+		 method: "post"
+	     })
+	 });
 	 document.getElementById('pause-button').addEventListener('click', () => {
 	     fetch("/pause", {
 		 method: "post"
@@ -80,6 +185,11 @@
 	 });
 	 document.getElementById('play-button').addEventListener('click', () => {
 	     fetch("/play", {
+		 method: "post"
+	     })
+	 });
+	 document.getElementById('clear-button').addEventListener('click', () => {
+	     fetch("/clear", {
 		 method: "post"
 	     })
 	 });
@@ -98,8 +208,10 @@
 		 method: "post"
 	     }).then(res => {
 		 updateCurrentSong()
+		 document.getElementById("media-url").value = ""
 	     })
 	 });
+	 
 	 document.getElementById('replace-button').addEventListener('click', () => {
 	     var url = document.getElementById("media-url").value;
 	     // Skip to the next song in the playlist
@@ -107,20 +219,31 @@
 		 method: "post"
 	     }).then(res => {
 		 updateCurrentSong()
+		 document.getElementById("media-url").value = ""
 	     })
 	 });
-	 document.getElementById('refresh-button').addEventListener('click', () => {
+	 document.getElementById('peek-button').addEventListener('click', () => {
 	     updateCurrentSong()
 	 });
 	 // Update the display text with the currently playing song
 	 function updateCurrentSong() {
-	     fetch("/get-title", {
+	     fetch("/peek", {
 		 method: "post"
 	     }).then((res) => res.text()).then((text) => {
-		 document.getElementById('current-song').textContent = text
+		 const texts = text.split('\n');
+		 const data = texts[0].split(' ');
+		 document.getElementById('progress').style.width = data[0]+"%";
+		 const time = new Date(Number(data[1]) * 1000).toISOString().slice(11, 19);
+		 const duration = new Date(Number(data[2]) * 1000).toISOString().slice(11, 19);
+		 document.getElementById('current-song-time').textContent = time;
+		 document.getElementById('current-song-duration').textContent = duration;
+		 document.getElementById('current-song').textContent = texts[1];
 	     })
 	 }
-	 updateCurrentSong()
+
+	 /* TODO handle network error on disconnect */
+	 const interval = setInterval(updateCurrentSong, 1000);
+	 
 	</script>
 
     </body>

@@ -162,34 +162,52 @@ fn handle_mpv_command(stream: &mut TcpStream, path: String, mpv: &Mpv) {
     let url = url::Url::parse(&format!("rel:{}", path)).unwrap();
     let command = &url.path()[1..];
     match command {
-        "pause" => mpv.pause().unwrap(),
-        "play" => mpv.unpause().unwrap(),
-        "next" => mpv.playlist_next_force().unwrap(),
-        "prev" => mpv.playlist_previous_force().unwrap(),
-        "get-title" => {
-            if let Ok(title) = mpv.get_property::<String>("media-title") {
-                serve_requested_text(&title, stream)
+        "peek" => {
+            let title = mpv
+                .get_property::<String>("media-title")
+                .unwrap_or_default();
+            let time = mpv.get_property::<f64>("time-pos").unwrap_or_default();
+            let duration = mpv.get_property::<f64>("duration").unwrap_or_default();
+            let percentage = mpv.get_property::<f64>("percent-pos").unwrap_or_default();
+            serve_requested_text(&format!("{percentage} {time} {duration}\n{title}"), stream);
+        }
+        "playpause" => {
+            _ = if let Ok(true) = mpv.get_property::<bool>("pause") {
+                mpv.unpause()
             } else {
-                serve_requested_text("<NA>", stream)
-            }
+                mpv.pause()
+            };
+        }
+        "pause" => {
+            _ = mpv.pause();
+        }
+        "play" => {
+            _ = mpv.unpause();
+        }
+        "next" => {
+            _ = mpv.playlist_next_force();
+        }
+        "prev" => {
+            _ = mpv.playlist_previous_force();
         }
         "append" => {
             if let Some(media) = url.query_pairs().filter(|(k, _)| k == "url").next() {
                 println!("{}", media.1);
-                mpv.playlist_load_files(&[(&media.1, FileState::AppendPlay, None)])
-                    .unwrap();
+                _ = mpv.playlist_load_files(&[(&media.1, FileState::AppendPlay, None)]);
             }
         }
         "replace" => {
             if let Some(media) = url.query_pairs().filter(|(k, _)| k == "url").next() {
                 println!("{}", media.1);
-                mpv.playlist_load_files(&[(&media.1, FileState::Replace, None)])
-                    .unwrap();
+                _ = mpv.playlist_load_files(&[(&media.1, FileState::Replace, None)]);
             }
         }
+        "clear" => {
+            _ = mpv.playlist_clear();
+        }
+
         _ => (),
     };
-    serve_requested_file("/", stream);
 }
 
 fn serve_requested_file(file_path: &str, stream: &mut TcpStream) {
