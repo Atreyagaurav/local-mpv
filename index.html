@@ -19,12 +19,14 @@
 
 	    <div class="currently-playing">
 		Current Playlist:<br/>
-		<div class="playlist" id="media-playlist">
+		<div class="playlist">
+		    <ol id="media-playlist">
+		    </ol>
 		</div>
 		
 		<div class="controls">
-		    <button class="control-button" id="clear-button"><i class="fa fa-redo"></i> Reset</button>
-		    <button class="control-button" id="peek-button"><i class="fa fa-eye"></i> Peek</button>
+		    <button class="control-button" id="clear-button"><i class="fa fa-redo"></i> Reset Playlist</button>
+		    <button class="control-button" id="playlist-button"><i class="fa fa-music"></i> Update Playlist</button>
 		</div>
 	    </div>
 
@@ -40,10 +42,12 @@
 		<div class="progress-bar">
 		    <div id="progress"></div>
 		</div>
-		<div class="controls-main">
+		<div class="controls">
+		    <button class="control-button" id="fullscreen-button"><i class="fa fa-expand"></i></button>
 		    <button class="control-button-main" id="previous-button"><i class="fa fa-step-backward"></i></button>
 		    <button class="control-button-main" id="playpause-button"><img src="playpause.svg" height="60"></button>
 		    <button class="control-button-main" id="next-button"><i class="fa fa-step-forward"></i></button>
+		    <button class="control-button" id="mute-button"><i class="fa fa-volume-mute"></i></button>
 		</div>
 		<div class="controls">
 		    <button class="control-button" id="backward-button"><i class="fa fa-backward"></i></button>
@@ -106,15 +110,6 @@
 	     margin-left: auto;
 	     margin-right: auto;
 	 }
-	 .controls-main {
-	     display: flex;
-	     justify-content: space-between;
-	     align-items: center;
-	     text-align: center;
-	     width: 60%;
-	     margin-left: auto;
-	     margin-right: auto;
-	 }
 	 .media-name{
 	     font-size: 20px;
 	     padding: 10px;
@@ -170,7 +165,7 @@
 	     fetch("/prev", {
 		 method: "post"
 	     }).then(res => {
-		 updateCurrentSong()
+		 updatePlayList()
 	     })
 	 });
 	 document.getElementById('playpause-button').addEventListener('click', () => {
@@ -191,6 +186,8 @@
 	 document.getElementById('clear-button').addEventListener('click', () => {
 	     fetch("/clear", {
 		 method: "post"
+	     }).then(res => {
+		 updatePlayList()
 	     })
 	 });
 	 document.getElementById('next-button').addEventListener('click', () => {
@@ -198,7 +195,7 @@
 	     fetch("/next", {
 		 method: "post"
 	     }).then(res => {
-		 updateCurrentSong()
+		 updatePlayList()
 	     })
 	 });
 	 document.getElementById('append-button').addEventListener('click', () => {
@@ -207,8 +204,8 @@
 	     fetch("/append?url="+url, {
 		 method: "post"
 	     }).then(res => {
-		 updateCurrentSong()
-		 document.getElementById("media-url").value = ""
+		 document.getElementById("media-url").value = "";
+		 updatePlayList()
 	     })
 	 });
 	 
@@ -218,13 +215,46 @@
 	     fetch("/replace?url="+url, {
 		 method: "post"
 	     }).then(res => {
-		 updateCurrentSong()
-		 document.getElementById("media-url").value = ""
+		 document.getElementById("media-url").value = "";
+		 updatePlayList()
 	     })
 	 });
-	 document.getElementById('peek-button').addEventListener('click', () => {
-	     updateCurrentSong()
+	 
+	 document.getElementById('fullscreen-button').addEventListener('click', () => {
+	     fetch("/fullscreen", {
+		 method: "post"
+	     })
 	 });
+	 document.getElementById('mute-button').addEventListener('click', () => {
+	     fetch("/mute", {
+		 method: "post"
+	     })
+	 });
+	 
+	 document.getElementById('playlist-button').addEventListener('click', () => {
+	     updatePlayList()
+	 });
+
+	 function updatePlayList() {
+	     fetch("/playlist", {
+		 method: "post"
+	     }).then((res) => res.text()).then((text) => {
+		 const data = JSON.parse(text)
+		 console.log(data);
+		 const pl = document.getElementById('media-playlist');
+		 pl.innerHTML = '';
+		 for (d in data) {
+		     const node = document.createElement("li");
+		     var fname = data[d]["filename"];
+		     if (data[d]["current"] == true) {
+			 node.innerHTML = '<i class="fa fa-play"></i> ' + fname;
+		     } else {
+			 node.innerHTML = fname;
+		     }
+		     pl.appendChild(node);
+		 }
+	     })
+	 }
 	 // Update the display text with the currently playing song
 	 function updateCurrentSong() {
 	     fetch("/peek", {
@@ -238,7 +268,7 @@
 		 document.getElementById('current-song-time').textContent = time;
 		 document.getElementById('current-song-duration').textContent = duration;
 		 document.getElementById('current-song').textContent = texts[1];
-	     })
+	 })
 	 }
 
 	 /* TODO handle network error on disconnect */

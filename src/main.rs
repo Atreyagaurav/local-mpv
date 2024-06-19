@@ -137,9 +137,6 @@ fn handle_connection(stream: &mut TcpStream, mpv: &Mpv) {
 
     // Convert the request buffer to a string
     let request_str = String::from_utf8_lossy(&buffer);
-
-    println!("Request: {}", request_str);
-
     if request_str.starts_with("GET") {
         let filepath = request_str
             .split_whitespace()
@@ -185,25 +182,55 @@ fn handle_mpv_command(stream: &mut TcpStream, path: String, mpv: &Mpv) {
             _ = mpv.unpause();
         }
         "next" => {
-            _ = mpv.playlist_next_force();
+            if mpv.playlist_next_force().is_ok() {
+                serve_success(stream);
+            }
         }
         "prev" => {
-            _ = mpv.playlist_previous_force();
+            if mpv.playlist_previous_force().is_ok() {
+                serve_success(stream);
+            }
         }
         "append" => {
             if let Some(media) = url.query_pairs().filter(|(k, _)| k == "url").next() {
                 println!("{}", media.1);
-                _ = mpv.playlist_load_files(&[(&media.1, FileState::AppendPlay, None)]);
+                if mpv
+                    .playlist_load_files(&[(&media.1, FileState::AppendPlay, None)])
+                    .is_ok()
+                {
+                    serve_success(stream);
+                }
             }
         }
         "replace" => {
             if let Some(media) = url.query_pairs().filter(|(k, _)| k == "url").next() {
                 println!("{}", media.1);
-                _ = mpv.playlist_load_files(&[(&media.1, FileState::Replace, None)]);
+                if mpv
+                    .playlist_load_files(&[(&media.1, FileState::Replace, None)])
+                    .is_ok()
+                {
+                    serve_success(stream);
+                }
             }
         }
+        "playlist" => {
+            let playlist = mpv
+                .get_property::<String>("playlist")
+                .unwrap_or("[]".to_string());
+            serve_requested_text(&playlist, stream);
+        }
         "clear" => {
-            _ = mpv.playlist_clear();
+            if mpv.playlist_clear().is_ok() {
+                serve_success(stream);
+            }
+        }
+        "fullscreen" => {
+            let fs = mpv.get_property::<bool>("fullscreen").unwrap_or(false);
+            _ = mpv.set_property("fullscreen", !fs);
+        }
+        "mute" => {
+            let fs = mpv.get_property::<bool>("mute").unwrap_or(false);
+            _ = mpv.set_property("mute", !fs);
         }
 
         _ => (),
@@ -237,6 +264,19 @@ fn serve_requested_file(file_path: &str, stream: &mut TcpStream) {
         }
     };
 
+    // Send the response over the TCP stream
+    stream.write(response.as_bytes()).unwrap();
+    stream.flush().unwrap();
+}
+
+fn serve_success(stream: &mut TcpStream) {
+    // Generate the HTTP response
+    let contents = "SUCCESS";
+    let response = format!(
+        "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{}",
+        contents.len(),
+        contents
+    );
     // Send the response over the TCP stream
     stream.write(response.as_bytes()).unwrap();
     stream.flush().unwrap();
