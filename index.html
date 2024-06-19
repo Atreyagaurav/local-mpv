@@ -25,7 +25,8 @@
 		</div>
 		
 		<div class="controls">
-		    <button class="control-button" id="clear-button"><i class="fa fa-redo"></i> Reset Playlist</button>
+		    <button class="control-button" id="stop-button"><i class="fa fa-times"></i> Reset</button>
+		    <button class="control-button" id="clear-button"><i class="fa fa-redo"></i> Clear Queue</button>
 		    <button class="control-button" id="playlist-button"><i class="fa fa-music"></i> Update Playlist</button>
 		</div>
 	    </div>
@@ -35,12 +36,12 @@
 		<p class="media-name">
 		    <span id="current-song"></span>
 		</p>
+		<div class="progress-bar" id="progress-bar">
+		    <div id="progress"></div>
+		</div>
 		<div class="time-info" style="text-align:left;">
 		    <span id="current-song-time"></span>
 		    <span style="float:right;" id="current-song-duration"></span>
-		</div>
-		<div class="progress-bar">
-		    <div id="progress"></div>
 		</div>
 		<div class="controls">
 		    <button class="control-button" id="fullscreen-button"><i class="fa fa-expand"></i></button>
@@ -63,6 +64,7 @@
 	 html, body {
 	     height: 100%;
 	     margin: 0px;
+	     background-color: #111;
 	 }
 	 input {
 	     box-sizing: border-box;
@@ -208,6 +210,13 @@
 		 updatePlayList()
 	     })
 	 });
+	 document.getElementById('stop-button').addEventListener('click', () => {
+	     fetch("/stop", {
+		 method: "post"
+	     }).then(res => {
+		 document.getElementById('media-playlist').innerHTML = '';
+	     })
+	 });
 	 
 	 document.getElementById('replace-button').addEventListener('click', () => {
 	     var url = document.getElementById("media-url").value;
@@ -229,6 +238,24 @@
 	     fetch("/mute", {
 		 method: "post"
 	     })
+	 });
+	 
+	 document.getElementById('forward-button').addEventListener('click', () => {
+	     fetch("/seek?forward=10", {
+		 method: "post"
+	     })
+	 });
+	 document.getElementById('backward-button').addEventListener('click', () => {
+	     fetch("/seek?backward=10", {
+		 method: "post"
+	     })
+	 });
+	 document.getElementById('progress-bar').addEventListener('click', (event) => {
+	     const perc = event.layerX * 100.0 / document.getElementById('progress-bar').offsetWidth
+	     document.getElementById('progress').style.width = perc+"%";
+	     fetch("/seek?percent="+perc, {
+		 method: "post"
+	     })   
 	 });
 	 
 	 document.getElementById('playlist-button').addEventListener('click', () => {
@@ -268,7 +295,7 @@
 		 document.getElementById('current-song-time').textContent = time;
 		 document.getElementById('current-song-duration').textContent = duration;
 		 document.getElementById('current-song').textContent = texts[1];
-	 })
+	     })
 	 }
 
 	 /* TODO handle network error on disconnect */

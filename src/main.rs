@@ -182,18 +182,17 @@ fn handle_mpv_command(stream: &mut TcpStream, path: String, mpv: &Mpv) {
             _ = mpv.unpause();
         }
         "next" => {
-            if mpv.playlist_next_force().is_ok() {
+            if mpv.playlist_next_weak().is_ok() {
                 serve_success(stream);
             }
         }
         "prev" => {
-            if mpv.playlist_previous_force().is_ok() {
+            if mpv.playlist_previous_weak().is_ok() {
                 serve_success(stream);
             }
         }
         "append" => {
             if let Some(media) = url.query_pairs().filter(|(k, _)| k == "url").next() {
-                println!("{}", media.1);
                 if mpv
                     .playlist_load_files(&[(&media.1, FileState::AppendPlay, None)])
                     .is_ok()
@@ -204,12 +203,30 @@ fn handle_mpv_command(stream: &mut TcpStream, path: String, mpv: &Mpv) {
         }
         "replace" => {
             if let Some(media) = url.query_pairs().filter(|(k, _)| k == "url").next() {
-                println!("{}", media.1);
                 if mpv
                     .playlist_load_files(&[(&media.1, FileState::Replace, None)])
                     .is_ok()
                 {
                     serve_success(stream);
+                }
+            }
+        }
+        "seek" => {
+            if let Some((par, val)) = url.query_pairs().last() {
+                if let Ok(val) = val.parse() {
+                    match par.as_ref() {
+                        "forward" => {
+                            _ = mpv.seek_forward(val);
+                        }
+                        "backward" => {
+                            _ = mpv.seek_backward(val);
+                        }
+                        "percent" => {
+                            let duration = mpv.get_property::<f64>("duration").unwrap_or_default();
+                            _ = mpv.seek_absolute(val / 100.0 * duration);
+                        }
+                        _ => (),
+                    }
                 }
             }
         }
@@ -232,7 +249,10 @@ fn handle_mpv_command(stream: &mut TcpStream, path: String, mpv: &Mpv) {
             let fs = mpv.get_property::<bool>("mute").unwrap_or(false);
             _ = mpv.set_property("mute", !fs);
         }
-
+        "stop" => {
+            _ = mpv.playlist_clear();
+            _ = mpv.playlist_next_force();
+        }
         _ => (),
     };
 }
