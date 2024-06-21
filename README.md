@@ -14,10 +14,11 @@ When run with the server option, a server is run in the machine with local IP ad
 
 # Options
 
-    Usage: wait-mpv [OPTIONS] [-- [ARGS]...]
-    
+Usage: wait-mpv [OPTIONS] [FILES]... [-- [OPTIONS]...]
+
     Arguments:
-      [ARGS]...  Any args to pass to mpv
+      [FILES]...    Files to play by MPV
+      [OPTIONS]...  Options for the mpv, only key-value pairs and bool flags are accepted
     
     Options:
       -c, --clipboard    track clipboard contents to play media
@@ -28,11 +29,21 @@ When run with the server option, a server is run in the machine with local IP ad
       -s, --server       Run a server to control the mpv
       -p, --port <PORT>  Run the server in the given port [default: 6780]
       -q, --qr           Display QR code for URL
-      -h, --help         Print help
+      -h, --help         Print help (see more with '--help')
       -V, --version      Print version
 
-# Not implemented
-`ARGS` are not yet sent to `mpv` through `libmpv`.
-
 # Future Plans
-Maybe make it filter the copied contents for urls/filepaths only so that other copied text don't mess up the playlist.
+- Maybe make it filter the copied contents for urls/filepaths only so that other copied text don't mess up the playlist.
+- Option to save/upload playlists as text file
+- Option to upload a file (music/video) from client's local storage
+- Add play and delete options to the entries in the playlist
+
+# Installation
+A small inconvience is that the `libmpv-rs` library is build against a
+fixed `libmpv` version. So, clone the `libmpv-rs` repo from github,
+and make sure it is made for the same version of `libmpv` that you
+have in your system. You can also change the version number in the
+`Cargo.toml` if the corresponding version is available in `crates.io`,
+in my case, I replaced the contents in `libmpv-sys/include/` in the
+`libmpv-rs` repo from the header files in `/use/include/mpv/`.
+

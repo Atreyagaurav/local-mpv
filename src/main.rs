@@ -201,10 +201,14 @@ fn handle_mpv_command(stream: &mut TcpStream, path: String, mpv: &Mpv) {
             let title = mpv
                 .get_property::<String>("media-title")
                 .unwrap_or_default();
+            let mute = mpv.get_property::<bool>("mute").unwrap_or_default();
             let time = mpv.get_property::<f64>("time-pos").unwrap_or_default();
             let duration = mpv.get_property::<f64>("duration").unwrap_or_default();
             let percentage = mpv.get_property::<f64>("percent-pos").unwrap_or_default();
-            serve_requested_text(&format!("{percentage} {time} {duration}\n{title}"), stream);
+            serve_requested_text(
+                &format!("{mute} {percentage} {time} {duration}\n{title}"),
+                stream,
+            );
         }
         "playpause" => {
             _ = if let Ok(true) = mpv.get_property::<bool>("pause") {
@@ -268,14 +272,25 @@ fn handle_mpv_command(stream: &mut TcpStream, path: String, mpv: &Mpv) {
                 }
             }
         }
+        "remove" => {
+            if let Some((var, val)) = url.query_pairs().last() {
+                if var == "i" {
+                    if let Ok(val) = val.parse() {
+                        if mpv.playlist_remove_index(val).is_ok() {
+                            serve_success(stream);
+                        }
+                    }
+                }
+            }
+        }
         "playlist" => {
             let playlist = mpv
                 .get_property::<String>("playlist")
                 .unwrap_or("[]".to_string());
             serve_requested_text(&playlist, stream);
         }
-        "clear" => {
-            if mpv.playlist_clear().is_ok() {
+        "shuffle" => {
+            if mpv.playlist_shuffle().is_ok() {
                 serve_success(stream);
             }
         }
