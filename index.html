@@ -26,8 +26,8 @@
 		
 		<div class="controls">
 		    <button class="control-button" id="stop-button"><i class="fa fa-times"></i> Reset</button>
-		    <button class="control-button" id="clear-button"><i class="fa fa-redo"></i> Clear Queue</button>
-		    <button class="control-button" id="playlist-button"><i class="fa fa-music"></i> Update Playlist</button>
+		    <button class="control-button" onclick='mpvCommandPL("/clear")'><i class="fa fa-redo"></i> Clear Queue</button>
+		    <button class="control-button" onclick='updatePlayList()'><i class="fa fa-music"></i> Update Playlist</button>
 		</div>
 	    </div>
 
@@ -44,17 +44,17 @@
 		    <span style="float:right;" id="current-song-duration"></span>
 		</div>
 		<div class="controls">
-		    <button class="control-button" id="fullscreen-button"><i class="fa fa-expand"></i></button>
-		    <button class="control-button-main" id="previous-button"><i class="fa fa-step-backward"></i></button>
-		    <button class="control-button-main" id="playpause-button"><img src="playpause.svg" height="60"></button>
-		    <button class="control-button-main" id="next-button"><i class="fa fa-step-forward"></i></button>
-		    <button class="control-button" id="mute-button"><i class="fa fa-volume-mute"></i></button>
+		    <button class="control-button" onclick='mpvCommand("/fullscreen")'><i class="fa fa-expand"></i></button>
+		    <button class="control-button-main" onclick='mpvCommandPL("/prev")'><i class="fa fa-step-backward"></i></button>
+		    <button class="control-button-main" onclick='mpvCommand("/playpause")'><img src="playpause.svg" height="60"></button>
+		    <button class="control-button-main" onclick='mpvCommandPL("/next")'><i class="fa fa-step-forward"></i></button>
+		    <button class="control-button" onclick='mpvCommand("/mute")'><i class="fa fa-volume-mute"></i></button>
 		</div>
 		<div class="controls">
-		    <button class="control-button" id="backward-button"><i class="fa fa-backward"></i></button>
-		    <button class="control-button" id="pause-button"><i class="fa fa-pause"></i></button>
-		    <button class="control-button" id="play-button"><i class="fa fa-play"></i></button>
-		    <button class="control-button" id="forward-button"><i class="fa fa-forward"></i></button>
+		    <button class="control-button" onclick='mpvCommand("/seek?backward=10")'><i class="fa fa-backward"></i></button>
+		    <button class="control-button" onclick='mpvCommand("/pause")'><i class="fa fa-pause"></i></button>
+		    <button class="control-button" onclick='mpvCommand("/play")'><i class="fa fa-play"></i></button>
+		    <button class="control-button" onclick='mpvCommand("/seek?forward=10")'><i class="fa fa-forward"></i></button>
 		</div>
 	    </div>
 	</div>
@@ -68,6 +68,7 @@
 	 }
 	 input {
 	     box-sizing: border-box;
+	     background-color: #555;
 	     width: 100%;
 	 }
 
@@ -95,7 +96,7 @@
 	 .playlist {
 	     width: 100%;
 	     height: 200px;
-	     border: 1px dotted #0313fc;
+	     border: 1px dotted #01f;
 	     color: #bae;
 	     overflow: scroll;
 	 }
@@ -104,6 +105,7 @@
 	     justify-content: space-between;
 	     align-items: center;
 	     width: 90%;
+	     padding: 0px;
 	     margin-left: auto;
 	     margin-right: auto;
 	 }
@@ -113,8 +115,10 @@
 	     margin-right: auto;
 	 }
 	 .media-name{
-	     font-size: 20px;
-	     padding: 10px;
+	     font-size: 18px;
+	     padding: 0px;
+	     margin-right: 10px;
+	     margin-left: 10px;
 	 }
 	 .control-button {
 	     background-color: #333;
@@ -144,11 +148,13 @@
 	     margin-top: 10px;
 	     overflow: hidden;
 	     position: relative;
-	     width: 100%;
+	     width: 95%;
+	     margin-left: auto;
+	     margin-right: auto;
 	 }
 
 	 #progress {
-	     background-color: #4CAF50;
+	     background-color: #4A5;
 	     height: 10px;
 	     position: absolute;
 	     top: 0;
@@ -162,44 +168,21 @@
 
 	<!-- Initialize the media player control -->
 	<script>
-	 document.getElementById('previous-button').addEventListener('click', () => {
-	     // Skip to the next song in the playlist
-	     fetch("/prev", {
+
+	 function mpvCommand(cmd) {
+	     fetch(cmd, {
+		 method: "post"
+	     })
+	 }
+
+	 function mpvCommandPL(cmd) {
+	     fetch(cmd, {
 		 method: "post"
 	     }).then(res => {
 		 updatePlayList()
 	     })
-	 });
-	 document.getElementById('playpause-button').addEventListener('click', () => {
-	     fetch("/playpause", {
-		 method: "post"
-	     })
-	 });
-	 document.getElementById('pause-button').addEventListener('click', () => {
-	     fetch("/pause", {
-		 method: "post"
-	     })
-	 });
-	 document.getElementById('play-button').addEventListener('click', () => {
-	     fetch("/play", {
-		 method: "post"
-	     })
-	 });
-	 document.getElementById('clear-button').addEventListener('click', () => {
-	     fetch("/clear", {
-		 method: "post"
-	     }).then(res => {
-		 updatePlayList()
-	     })
-	 });
-	 document.getElementById('next-button').addEventListener('click', () => {
-	     // Skip to the next song in the playlist
-	     fetch("/next", {
-		 method: "post"
-	     }).then(res => {
-		 updatePlayList()
-	     })
-	 });
+	 }
+
 	 document.getElementById('append-button').addEventListener('click', () => {
 	     var url = document.getElementById("media-url").value;
 	     // Skip to the next song in the playlist
@@ -229,37 +212,12 @@
 	     })
 	 });
 	 
-	 document.getElementById('fullscreen-button').addEventListener('click', () => {
-	     fetch("/fullscreen", {
-		 method: "post"
-	     })
-	 });
-	 document.getElementById('mute-button').addEventListener('click', () => {
-	     fetch("/mute", {
-		 method: "post"
-	     })
-	 });
-	 
-	 document.getElementById('forward-button').addEventListener('click', () => {
-	     fetch("/seek?forward=10", {
-		 method: "post"
-	     })
-	 });
-	 document.getElementById('backward-button').addEventListener('click', () => {
-	     fetch("/seek?backward=10", {
-		 method: "post"
-	     })
-	 });
 	 document.getElementById('progress-bar').addEventListener('click', (event) => {
 	     const perc = event.layerX * 100.0 / document.getElementById('progress-bar').offsetWidth
 	     document.getElementById('progress').style.width = perc+"%";
 	     fetch("/seek?percent="+perc, {
 		 method: "post"
 	     })   
-	 });
-	 
-	 document.getElementById('playlist-button').addEventListener('click', () => {
-	     updatePlayList()
 	 });
 
 	 function updatePlayList() {

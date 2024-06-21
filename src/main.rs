@@ -2,7 +2,7 @@ use clap::Parser;
 use std::fs;
 use std::io::prelude::*;
 use std::net::{TcpListener, TcpStream};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::exit;
 
 use arboard::Clipboard;
@@ -35,10 +35,36 @@ struct Args {
     /// Display QR code for URL
     #[arg(short, long, requires = "server")]
     qr: bool,
+    /// Files to play by MPV
+    files: Vec<PathBuf>,
 
-    /// Any args to pass to mpv
+    /// Options for the mpv, only key-value pairs and bool flags are accepted
+    ///
+    /// --idle option cannot be changed.
     #[arg(num_args(0..), last(true))]
-    args: Vec<String>,
+    options: Vec<String>,
+}
+
+fn parse_options(options: &[String]) -> Vec<(&str, &str)> {
+    let mut seekval = false;
+    let mut lastarg = "";
+    let mut args = Vec::new();
+    for op in options {
+        if op.starts_with("--") {
+            if seekval {
+                args.push((lastarg, "yes"));
+            }
+
+            if let Some((k, v)) = op[2..].split_once("=") {
+                args.push((k, v));
+                seekval = false;
+            } else {
+                lastarg = &op[2..];
+                seekval = true;
+            }
+        }
+    }
+    args
 }
 
 fn main() -> libmpv::Result<()> {
@@ -47,7 +73,6 @@ fn main() -> libmpv::Result<()> {
     let mut clip_txt = ctx.get_text().unwrap_or_else(|_| String::from(""));
 
     let mpv = Mpv::new()?;
-    mpv.set_property("idle", "yes")?;
     mpv.set_property("osc", "yes")?;
     mpv.set_property("input-default-bindings", "yes")?;
     mpv.set_property("input-vo-keyboard", "yes")?;
@@ -64,6 +89,19 @@ fn main() -> libmpv::Result<()> {
         mpv.set_property("loop-playlist", "inf")?;
     }
     let mut ev_ctx = mpv.create_event_context();
+
+    for (k, v) in parse_options(&args.options) {
+        mpv.set_property(k, v)?;
+    }
+    mpv.set_property("idle", "yes")?;
+
+    let files: Vec<(&str, FileState, Option<&str>)> = args
+        .files
+        .iter()
+        .filter_map(|f| f.to_str())
+        .map(|f| (f, FileState::AppendPlay, None))
+        .collect();
+    mpv.playlist_load_files(&files)?;
 
     std::thread::scope(|s| {
         if args.clipboard {
@@ -250,10 +288,12 @@ fn handle_mpv_command(stream: &mut TcpStream, path: String, mpv: &Mpv) {
             _ = mpv.set_property("mute", !fs);
         }
         "stop" => {
-            _ = mpv.playlist_clear();
-            _ = mpv.playlist_next_force();
+            if mpv.playlist_clear().is_ok() {
+                _ = mpv.playlist_next_force();
+                serve_success(stream);
+            }
         }
-        _ => (),
+        _ => serve_bad_request(stream),
     };
 }
 
@@ -294,6 +334,19 @@ fn serve_success(stream: &mut TcpStream) {
     let contents = "SUCCESS";
     let response = format!(
         "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{}",
+        contents.len(),
+        contents
+    );
+    // Send the response over the TCP stream
+    stream.write(response.as_bytes()).unwrap();
+    stream.flush().unwrap();
+}
+
+fn serve_bad_request(stream: &mut TcpStream) {
+    // Generate the HTTP response
+    let contents = "No Such End Point in API";
+    let response = format!(
+        "HTTP/1.1 400 Bad Request\r\nContent-Length: {}\r\n\r\n{}",
         contents.len(),
         contents
     );
