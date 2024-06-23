@@ -31,6 +31,10 @@ A server is run in the machine with local IP address at the given port. The addr
 - Play any of the entries in the playlist by clicking a button
 
 # Installation
+Simple, `cargo build --release` command should work for the
+compilation. If you get an error on running the binary compiled from
+there. It might be a problems with `libmpv-rs`.
+
 A small inconvience is that the `libmpv-rs` library is build against a
 fixed `libmpv` version. So, clone the `libmpv-rs` repo from github,
 and make sure it is made for the same version of `libmpv` that you
@@ -39,3 +43,5 @@ have in your system. You can also change the version number in the
 in my case, I replaced the contents in `libmpv-sys/include/` in the
 `libmpv-rs` repo from the header files in `/use/include/mpv/`.
 
+## Arch Linux
+For Arch Linux, a patch file is provided. But it might be better to install from AUR package [local-mpv-git](https://aur.archlinux.org/packages/local-mpv-git).
