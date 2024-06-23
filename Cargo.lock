@@ -508,6 +508,8 @@ checksum = "97b3888a4aecf77e811145cadf6eef5901f4782c53886191b2f693f24761847c"
 [[package]]
 name = "libmpv"
 version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "61a58e2d19b34775e81e0fdca194b3b8ee8de973b092e7582b416343979e22e7"
 dependencies = [
  "libmpv-sys",
 ]
@@ -515,6 +517,8 @@ dependencies = [
 [[package]]
 name = "libmpv-sys"
 version = "3.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0df938d3145cd8f134572721a27afa3a51f9bc1c26ae30a1d5077162f96d074b"
 
 [[package]]
 name = "linux-raw-sys"
@@ -527,6 +531,19 @@ name = "litemap"
 version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "643cb0b8d4fcc284004d5fd0d67ccf61dfffadb7f75e1e71bc420f4688a3a704"
+
+[[package]]
+name = "local-mpv"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "arboard",
+ "clap",
+ "fast_qr",
+ "if-addrs",
+ "libmpv",
+ "url",
+]
 
 [[package]]
 name = "lock_api"
@@ -871,19 +888,6 @@ name = "utf8parse"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
-
-[[package]]
-name = "wait-mpv"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "arboard",
- "clap",
- "fast_qr",
- "if-addrs",
- "libmpv",
- "url",
-]
 
 [[package]]
 name = "weezl"
