@@ -5,30 +5,20 @@ use std::net::{TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
 use std::process::exit;
 
-use arboard::Clipboard;
 use libmpv::{events::Event, FileState, Mpv};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    /// track clipboard contents to play media
-    #[arg(short, long)]
-    clipboard: bool,
     /// run mpv in loop mode
     #[arg(short, long)]
     r#loop: bool,
-    /// add things in playlist instead of playing it instantly
-    #[arg(short, long)]
-    append: bool,
     /// Do not show video play audio only
     #[arg(short, long)]
     no_video: bool,
     /// Fullscreen
     #[arg(short, long, conflicts_with = "no_video")]
     fullscreen: bool,
-    /// Run a server to control the mpv
-    #[arg(short, long)]
-    server: bool,
     /// Run the server in the given port
     #[arg(short, long, default_value = "6780")]
     port: u16,
@@ -69,9 +59,6 @@ fn parse_options(options: &[String]) -> Vec<(&str, &str)> {
 
 fn main() -> libmpv::Result<()> {
     let args = Args::parse();
-    let mut ctx = Clipboard::new().unwrap();
-    let mut clip_txt = ctx.get_text().unwrap_or_else(|_| String::from(""));
-
     let mpv = Mpv::new()?;
     mpv.set_property("osc", "yes")?;
     mpv.set_property("input-default-bindings", "yes")?;
@@ -103,35 +90,13 @@ fn main() -> libmpv::Result<()> {
         .collect();
     mpv.playlist_load_files(&files)?;
 
+    let addr: Vec<String> = if_addrs::get_if_addrs()
+        .unwrap()
+        .into_iter()
+        .map(|a| a.ip().to_string())
+        .collect();
+
     std::thread::scope(|s| {
-        if args.clipboard {
-            s.spawn(|| loop {
-                let clip_new = ctx.get_text().unwrap_or_else(|_| String::from(""));
-
-                if clip_new != clip_txt {
-                    // let url = url::Url::parse(&clip_new);
-                    // println!("{:?}", url);
-                    // // url fails on file path, Path::from never fails
-                    // if url.is_ok() {
-                    println!("{}", clip_new);
-                    mpv.playlist_load_files(&[(
-                        &clip_new,
-                        if args.append {
-                            FileState::AppendPlay
-                        } else {
-                            FileState::Replace
-                        },
-                        None,
-                    )])
-                    .unwrap();
-                    mpv.unpause().ok();
-                    // }
-                    clip_txt = clip_new;
-                }
-                std::thread::sleep(std::time::Duration::from_millis(100));
-            });
-        }
-
         s.spawn(|| loop {
             let ev = ev_ctx.wait_event(600.).unwrap_or(Err(libmpv::Error::Null));
             match ev {
@@ -142,21 +107,23 @@ fn main() -> libmpv::Result<()> {
             }
         });
 
-        if args.server {
-            s.spawn(|| {
-                let addr = if_addrs::get_if_addrs()
-                    .unwrap()
-                    .into_iter()
-                    .map(|a| a.ip())
-                    .filter(|a| a.is_ipv4() && !a.to_string().contains("127.0.0.1"))
-                    .next()
-                    .unwrap();
-                let hp_addr = format!("http://{addr}:{}", args.port);
+        addr.iter()
+            .map(|ip| ip.to_string())
+            .filter(|url| !url.contains("//127.0.0.1:") && !url.contains("//[::1]:"))
+            .for_each(|ip| {
+                let hp_addr = format!("http://{ip}:{}", args.port);
                 println!("{}", hp_addr);
                 if args.qr {
-                    fast_qr::QRBuilder::new(hp_addr).build().unwrap().print();
+                    fast_qr::QRBuilder::new(hp_addr)
+                        .ecl(fast_qr::ECL::M)
+                        .build()
+                        .unwrap()
+                        .print();
                 }
-                let endpoint = format!("{addr}:{}", args.port);
+            });
+        for ip in &addr {
+            s.spawn(|| {
+                let endpoint = format!("{}:{}", ip.clone(), args.port);
                 let listener = TcpListener::bind(endpoint).unwrap();
                 for incoming_stream in listener.incoming() {
                     let mut stream = incoming_stream.unwrap();
@@ -322,25 +289,33 @@ fn serve_requested_file(file_path: &str, stream: &mut TcpStream) {
 
     let path = Path::new(&file_path);
 
+    // I guess mime type is not required....
+    // let mime = mime_guess::from_path(path).first_or_text_plain();
+
     // Generate the HTTP response
-    let response = match fs::read_to_string(&path) {
-        Ok(contents) => format!(
-            "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{}",
-            contents.len(),
-            contents
+    let (response, contents) = match fs::read(&path) {
+        Ok(contents) => (
+            format!(
+                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n",
+                contents.len()
+            ),
+            contents,
         ),
         Err(_) => {
             let not_found = "404 Not Found.";
-            format!(
-                "HTTP/1.1 404 NOT FOUND\r\nContent-Length: {}\r\n\r\n{}",
-                not_found.len(),
-                not_found
+            (
+                format!(
+                    "HTTP/1.1 404 NOT FOUND\r\nContent-Length: {}\r\n\r\n",
+                    not_found.len(),
+                ),
+                not_found.bytes().collect(),
             )
         }
     };
 
     // Send the response over the TCP stream
     stream.write(response.as_bytes()).unwrap();
+    stream.write(&contents).unwrap();
     stream.flush().unwrap();
 }
 
