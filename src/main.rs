@@ -271,7 +271,7 @@ fn handle_mpv_command(stream: &mut TcpStream, path: String, mpv: &Mpv) {
         }
         "stop" => {
             if mpv.playlist_clear().is_ok() {
-                _ = mpv.playlist_next_force();
+                _ = mpv.playlist_remove_current();
                 serve_success(stream);
             }
         }

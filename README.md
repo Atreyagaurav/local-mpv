@@ -1,3 +1,5 @@
+![](./favicon.ico)
+
 # Intro
 This program uses `libmpv` to play videos/musics. It will run an idle `mpv` instance, and provide a web-app to control the mpv.
 
