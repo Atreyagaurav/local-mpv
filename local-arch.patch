@@ -1,0 +1,46 @@
+diff --git a/Cargo.lock b/Cargo.lock
+index 743ab20..397ef9b 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -508,8 +508,6 @@ checksum = "97b3888a4aecf77e811145cadf6eef5901f4782c53886191b2f693f24761847c"
+ [[package]]
+ name = "libmpv"
+ version = "2.0.1"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "61a58e2d19b34775e81e0fdca194b3b8ee8de973b092e7582b416343979e22e7"
+ dependencies = [
+  "libmpv-sys",
+ ]
+@@ -517,8 +515,6 @@ dependencies = [
+ [[package]]
+ name = "libmpv-sys"
+ version = "3.1.0"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "0df938d3145cd8f134572721a27afa3a51f9bc1c26ae30a1d5077162f96d074b"
+ 
+ [[package]]
+ name = "linux-raw-sys"
+diff --git a/Cargo.toml b/Cargo.toml
+index 970d683..634114e 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -11,5 +11,5 @@ arboard = "3.4.0"
+ clap = { version = "4.5.7", features = ["derive"] }
+ fast_qr = "0.12.5"
+ if-addrs = "0.12.0"
+-libmpv = "2.0.1"
++libmpv = { path = "libmpv-rs"}
+ url = "2.5.1"
+diff --git a/src/main.rs b/src/main.rs
+index 5159b76..1abbff7 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -287,7 +287,7 @@ fn serve_requested_file(file_path: &str, stream: &mut TcpStream) {
+         &file_path[1..]
+     };
+ 
+-    let path = Path::new(&file_path);
++    let path = Path::new("/usr/share/local-mpv").join(file_path);
+ 
+     // I guess mime type is not required....
+     // let mime = mime_guess::from_path(path).first_or_text_plain();

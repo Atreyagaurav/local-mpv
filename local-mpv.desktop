@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Local MPV Player
+Comment=Mpv server for local network
+# Path=
+Exec=local-mpv
+# Icon=
+Terminal=false
+Categories=AudioVideo;Audio;Video;
