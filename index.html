@@ -308,13 +308,15 @@
 		 for (d in data) {
 		     const node = document.createElement("li");
 		     var fname = data[d]["filename"];
+		     if ("title" in data[d]) {
+			 fname = data[d]["title"];
+		     }
 		     if (data[d]["current"] == true) {
-			 /* '<button class="tiny-button" onclick="mpvCommandPL(\'/select?i='+d+'\')">[Play]</button>'+
-			  */
-			 node.innerHTML = '<i class="fa fa-play"></i> ' + fname  +
+			 node.innerHTML = '<i class="fa fa-play"></i> ' + fname +
 					  '<button class="tiny-button" style="color:red;float:right;" onclick="mpvCommandPL(\'/remove?i='+d+'\')">Remove</button>';
 		     } else {
-			 node.innerHTML = fname +
+	                 node.innerHTML = '<button class="tiny-button" onclick="mpvCommandPL(\'/select?item='+ d +'\')">[Play]</button>' +
+	                                  fname +
 					  '<button class="tiny-button" style="color:red;float:right;" onclick="mpvCommandPL(\'/remove?i='+d+'\')">Remove</button>';
 		     }
 		     pl.appendChild(node);

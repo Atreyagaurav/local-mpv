@@ -126,8 +126,9 @@ fn main() -> libmpv::Result<()> {
                 let endpoint = format!("{}:{}", ip.clone(), args.port);
                 let listener = TcpListener::bind(endpoint).unwrap();
                 for incoming_stream in listener.incoming() {
-                    let mut stream = incoming_stream.unwrap();
-                    handle_connection(&mut stream, &mpv);
+                    if let Ok(mut stream) = incoming_stream {
+                        handle_connection(&mut stream, &mpv);
+                    }
                 }
             });
         }
@@ -138,7 +139,10 @@ fn main() -> libmpv::Result<()> {
 fn handle_connection(stream: &mut TcpStream, mpv: &Mpv) {
     // Buffer to read the incoming request
     let mut buffer = [0; 1024];
-    stream.read(&mut buffer).unwrap();
+    if let Err(e) = stream.read(&mut buffer) {
+        eprintln!("Error reading stream: {e:?}");
+        return;
+    }
 
     // Convert the request buffer to a string
     let request_str = String::from_utf8_lossy(&buffer);
@@ -161,7 +165,13 @@ fn handle_connection(stream: &mut TcpStream, mpv: &Mpv) {
 
 fn handle_mpv_command(stream: &mut TcpStream, path: String, mpv: &Mpv) {
     // to stop from RelativeUrlwithoutBase
-    let url = url::Url::parse(&format!("rel:{}", path)).unwrap();
+    let url = match url::Url::parse(&format!("rel:{}", path)) {
+        Ok(u) => u,
+        Err(e) => {
+            eprintln!("Invalid Url: {path}\n{e:?}");
+            return;
+        }
+    };
     let command = &url.path()[1..];
     match command {
         "peek" => {
@@ -198,6 +208,15 @@ fn handle_mpv_command(stream: &mut TcpStream, path: String, mpv: &Mpv) {
         "prev" => {
             if mpv.playlist_previous_weak().is_ok() {
                 serve_success(stream);
+            }
+        }
+        "select" => {
+            if let Some((_, item)) = url.query_pairs().filter(|(k, _)| k == "item").next() {
+                if let Ok(item) = item.parse::<i64>() {
+                    if mpv.set_property("playlist-pos", item).is_ok() {
+                        serve_success(stream);
+                    }
+                }
             }
         }
         "append" => {
@@ -314,9 +333,9 @@ fn serve_requested_file(file_path: &str, stream: &mut TcpStream) {
     };
 
     // Send the response over the TCP stream
-    stream.write(response.as_bytes()).unwrap();
-    stream.write(&contents).unwrap();
-    stream.flush().unwrap();
+    _ = stream.write(response.as_bytes());
+    _ = stream.write(&contents);
+    _ = stream.flush();
 }
 
 fn serve_success(stream: &mut TcpStream) {
@@ -328,8 +347,8 @@ fn serve_success(stream: &mut TcpStream) {
         contents
     );
     // Send the response over the TCP stream
-    stream.write(response.as_bytes()).unwrap();
-    stream.flush().unwrap();
+    _ = stream.write(response.as_bytes());
+    _ = stream.flush();
 }
 
 fn serve_bad_request(stream: &mut TcpStream) {
@@ -341,8 +360,8 @@ fn serve_bad_request(stream: &mut TcpStream) {
         contents
     );
     // Send the response over the TCP stream
-    stream.write(response.as_bytes()).unwrap();
-    stream.flush().unwrap();
+    _ = stream.write(response.as_bytes());
+    _ = stream.flush();
 }
 
 fn serve_requested_text(contents: &str, stream: &mut TcpStream) {
@@ -353,6 +372,6 @@ fn serve_requested_text(contents: &str, stream: &mut TcpStream) {
         contents
     );
     // Send the response over the TCP stream
-    stream.write(response.as_bytes()).unwrap();
-    stream.flush().unwrap();
+    _ = stream.write(response.as_bytes());
+    _ = stream.flush();
 }
