@@ -8,6 +8,8 @@ A server is run in the machine with local IP address at the given port. The addr
 
 ![Screenshot of the Wait MPV Webapp](./screenshot.png)
 
+You can run the program with a list of files in commandline args that'll be in the playlist from default, or you can add urls to the playlist from web app. If you add the link of youtube playlist in the add url option, it'll add all the songs, while adding links of the songs will add just one.
+
 # Options
 
     Usage: local-mpv [OPTIONS] [FILES]... [-- [OPTIONS]...]
