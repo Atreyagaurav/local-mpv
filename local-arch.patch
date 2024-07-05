@@ -32,15 +32,15 @@ index 970d683..634114e 100644
 +libmpv = { path = "libmpv-rs"}
  url = "2.5.1"
 diff --git a/src/main.rs b/src/main.rs
-index 5159b76..1abbff7 100644
+index 8557361..30303bd 100644
 --- a/src/main.rs
 +++ b/src/main.rs
-@@ -287,7 +287,7 @@ fn serve_requested_file(file_path: &str, stream: &mut TcpStream) {
+@@ -307,7 +307,7 @@ fn serve_requested_file(file_path: &str, stream: &mut TcpStream) {
          &file_path[1..]
      };
  
 -    let path = Path::new(&file_path);
 +    let path = Path::new("/usr/share/local-mpv").join(file_path);
  
-     // I guess mime type is not required....
+     // I guess mime type is not required.... for now
      // let mime = mime_guess::from_path(path).first_or_text_plain();

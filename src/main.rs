@@ -182,9 +182,10 @@ fn handle_mpv_command(stream: &mut TcpStream, path: String, mpv: &Mpv) {
             let time = mpv.get_property::<f64>("time-pos").unwrap_or_default();
             let duration = mpv.get_property::<f64>("duration").unwrap_or_default();
             let percentage = mpv.get_property::<f64>("percent-pos").unwrap_or_default();
-            serve_requested_text(
-                &format!("{mute} {percentage} {time} {duration}\n{title}"),
+            serve_text(
                 stream,
+                &format!("{mute} {percentage} {time} {duration}\n{title}"),
+                None,
             );
         }
         "playpause" => {
@@ -202,19 +203,19 @@ fn handle_mpv_command(stream: &mut TcpStream, path: String, mpv: &Mpv) {
         }
         "next" => {
             if mpv.playlist_next_weak().is_ok() {
-                serve_success(stream);
+                serve_text(stream, "SUCCESS", None);
             }
         }
         "prev" => {
             if mpv.playlist_previous_weak().is_ok() {
-                serve_success(stream);
+                serve_text(stream, "SUCCESS", None);
             }
         }
         "select" => {
             if let Some((_, item)) = url.query_pairs().filter(|(k, _)| k == "item").next() {
                 if let Ok(item) = item.parse::<i64>() {
                     if mpv.set_property("playlist-pos", item).is_ok() {
-                        serve_success(stream);
+                        serve_text(stream, "SUCCESS", None);
                     }
                 }
             }
@@ -225,7 +226,7 @@ fn handle_mpv_command(stream: &mut TcpStream, path: String, mpv: &Mpv) {
                     .playlist_load_files(&[(&media.1, FileState::AppendPlay, None)])
                     .is_ok()
                 {
-                    serve_success(stream);
+                    serve_text(stream, "SUCCESS", None);
                 }
             }
         }
@@ -235,7 +236,7 @@ fn handle_mpv_command(stream: &mut TcpStream, path: String, mpv: &Mpv) {
                     .playlist_load_files(&[(&media.1, FileState::Replace, None)])
                     .is_ok()
                 {
-                    serve_success(stream);
+                    serve_text(stream, "SUCCESS", None);
                 }
             }
         }
@@ -263,7 +264,7 @@ fn handle_mpv_command(stream: &mut TcpStream, path: String, mpv: &Mpv) {
                 if var == "i" {
                     if let Ok(val) = val.parse() {
                         if mpv.playlist_remove_index(val).is_ok() {
-                            serve_success(stream);
+                            serve_text(stream, "SUCCESS", None);
                         }
                     }
                 }
@@ -273,11 +274,11 @@ fn handle_mpv_command(stream: &mut TcpStream, path: String, mpv: &Mpv) {
             let playlist = mpv
                 .get_property::<String>("playlist")
                 .unwrap_or("[]".to_string());
-            serve_requested_text(&playlist, stream);
+            serve_text(stream, &playlist, None);
         }
         "shuffle" => {
             if mpv.playlist_shuffle().is_ok() {
-                serve_success(stream);
+                serve_text(stream, "SUCCESS", None);
             }
         }
         "fullscreen" => {
@@ -291,10 +292,10 @@ fn handle_mpv_command(stream: &mut TcpStream, path: String, mpv: &Mpv) {
         "stop" => {
             if mpv.playlist_clear().is_ok() {
                 _ = mpv.playlist_remove_current();
-                serve_success(stream);
+                serve_text(stream, "SUCCESS", None);
             }
         }
-        _ => serve_bad_request(stream),
+        _ => serve_text(stream, "No Such End Point in API", Some("400 Bad Request")),
     };
 }
 
@@ -308,7 +309,7 @@ fn serve_requested_file(file_path: &str, stream: &mut TcpStream) {
 
     let path = Path::new(&file_path);
 
-    // I guess mime type is not required....
+    // I guess mime type is not required.... for now
     // let mime = mime_guess::from_path(path).first_or_text_plain();
 
     // Generate the HTTP response
@@ -338,38 +339,13 @@ fn serve_requested_file(file_path: &str, stream: &mut TcpStream) {
     _ = stream.flush();
 }
 
-fn serve_success(stream: &mut TcpStream) {
-    // Generate the HTTP response
-    let contents = "SUCCESS";
-    let response = format!(
-        "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{}",
-        contents.len(),
-        contents
-    );
-    // Send the response over the TCP stream
-    _ = stream.write(response.as_bytes());
-    _ = stream.flush();
-}
-
-fn serve_bad_request(stream: &mut TcpStream) {
-    // Generate the HTTP response
-    let contents = "No Such End Point in API";
-    let response = format!(
-        "HTTP/1.1 400 Bad Request\r\nContent-Length: {}\r\n\r\n{}",
-        contents.len(),
-        contents
-    );
-    // Send the response over the TCP stream
-    _ = stream.write(response.as_bytes());
-    _ = stream.flush();
-}
-
-fn serve_requested_text(contents: &str, stream: &mut TcpStream) {
+fn serve_text(stream: &mut TcpStream, text: &str, code: Option<&str>) {
     // Generate the HTTP response
     let response = format!(
-        "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{}",
-        contents.len(),
-        contents
+        "HTTP/1.1 {}\r\nContent-Length: {}\r\n\r\n{}",
+        code.unwrap_or("200 OK"),
+        text.len(),
+        text
     );
     // Send the response over the TCP stream
     _ = stream.write(response.as_bytes());
