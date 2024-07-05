@@ -44,8 +44,11 @@
 		    <span id="current-song-time"></span>
 		    <span style="float:right;" id="current-song-duration"></span>
 		</div>
+
 		<div class="controls">
-		    <button class="control-button" onclick='mpvCommand("/fullscreen")'><i class="fa fa-expand"></i></button>
+		    <div class="controls-vert">
+		<div class="controls">
+		    <button class="control-button" onclick='mpvCommand("/seek?backward=10")'><i class="fa fa-backward"></i></button>
 		    <button class="control-button-main" onclick='mpvCommandPL("/prev")'><i class="fa fa-step-backward"></i></button>
 		    <button class="control-button-main" onclick='mpvCommand("/playpause")'>
 			<svg width="62" height="62">
@@ -58,13 +61,20 @@
 
 		    </button>
 		    <button class="control-button-main" onclick='mpvCommandPL("/next")'><i class="fa fa-step-forward"></i></button>
-		    <button class="control-button" id="mute-button" onclick='mpvCommand("/mute")'><i class="fa fa-volume-mute"></i></button>
+		    <button class="control-button" onclick='mpvCommand("/seek?forward=10")'><i class="fa fa-forward"></i></button>
 		</div>
 		<div class="controls">
-		    <button class="control-button" onclick='mpvCommand("/seek?backward=10")'><i class="fa fa-backward"></i></button>
+		    <button class="control-button" onclick='mpvCommand("/fullscreen")'><i class="fa fa-expand"></i></button>
 		    <button class="control-button" onclick='mpvCommand("/pause")'><i class="fa fa-pause"></i></button>
 		    <button class="control-button" onclick='mpvCommand("/play")'><i class="fa fa-play"></i></button>
-		    <button class="control-button" onclick='mpvCommand("/seek?forward=10")'><i class="fa fa-forward"></i></button>
+		    <button class="control-button" id="volume-button" onclick='mpvCommand("/mute")'><i class="fa fa-volume-up"></i></button>
+
+		</div>
+
+		</div>
+		<div class="volume-bar" id="volume-bar">
+		    <div id="volume"></div>
+		</div>
 		</div>
 	    </div>
 	</div>
@@ -76,7 +86,7 @@
 		<br />
 		Reconnecting ...
 	    </p>
-	</div> 
+	</div>
 	<!-- Style the media player control -->
 	<style>
 	 html {
@@ -125,6 +135,10 @@
 	     border: 1px dotted #01f;
 	     color: #bae;
 	     overflow: scroll;
+	 }
+	 .controls-vert {
+	     width: 90%;
+	     padding: 0px;
 	 }
 	 .controls {
 	     display: flex;
@@ -197,11 +211,30 @@
 
 	 #progress {
 	     background-color: #4A5;
-	     height: 10px;
+	     width: 10px;
 	     position: absolute;
 	     top: 0;
 	     left: 0;
-	     width: 0%;
+	     height: 0%;
+	 }
+
+	 .volume-bar {
+	     background-color: #ccc;
+	     width: 10px;
+	     height: 100px;
+	     overflow: hidden;
+	     position: relative;
+	     margin-right: 10px;
+	     margin-bottom: 10px;
+	 }
+
+	 #volume {
+	     background-color: #4Af;
+	     width: 10px;
+	     position: absolute;
+	     bottom: 0;
+	     right: 0;
+	     height: 0px;
 	 }
 
 	 #overlay {
@@ -234,7 +267,7 @@
 	     margin-right: auto;
 	     top: 200px;
 	 }
-	 
+
 	</style>
 
 	<!-- Add some media player control icons -->
@@ -298,6 +331,14 @@
 	     })
 	 });
 
+	 document.getElementById('volume-bar').addEventListener('click', (event) => {
+	     const perc = (document.getElementById('volume-bar').getBoundingClientRect().bottom - event.clientY)
+	     document.getElementById('volume').style.height = perc + "px";
+	     fetch("/volume?value="+perc, {
+		 method: "post"
+	     })
+	 });
+
 	 function updatePlayList() {
 	     fetch("/playlist", {
 		 method: "post"
@@ -330,18 +371,23 @@
 	     }).then((res) => res.text()).then((text) => {
 		 document.getElementById('overlay').style.display = "none";
 		 const texts = text.split('\n');
-		 const data = texts[0].split(' ');
-		 if (data[0] === "true") {
-		     document.getElementById('mute-button').style.color = "red";
+		 const voldata = texts[0].split(' ');
+		 const playdata = texts[1].split(' ');
+		 const vol_btn = document.getElementById('volume-button');
+		 if (voldata[0] === "true") {
+		     vol_btn.style.color = "red";
+		     vol_btn.innerHTML = '<i class="fa fa-volume-mute"></i>';
 		 } else {
-		     document.getElementById('mute-button').style.color = "white";
+		     vol_btn.style.color = "white";
+		     vol_btn.innerHTML = '<i class="fa fa-volume-up"></i>';
 		 }
-		 document.getElementById('progress').style.width = data[1]+"%";
-		 const time = new Date(Number(data[2]) * 1000).toISOString().slice(11, 19);
-		 const duration = new Date(Number(data[3]) * 1000).toISOString().slice(11, 19);
+		 document.getElementById('volume').style.height = voldata[1] + "px";
+		 document.getElementById('progress').style.width = playdata[0]+"%";
+		 const time = new Date(Number(playdata[1]) * 1000).toISOString().slice(11, 19);
+		 const duration = new Date(Number(playdata[2]) * 1000).toISOString().slice(11, 19);
 		 document.getElementById('current-song-time').textContent = time;
 		 document.getElementById('current-song-duration').textContent = duration;
-		 document.getElementById('current-song').textContent = texts[1];
+		 document.getElementById('current-song').textContent = texts[2];
 	     }).catch((error) => {
 		 document.getElementById('overlay').style.display = "block";
 	     })
