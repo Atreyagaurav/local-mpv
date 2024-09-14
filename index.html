@@ -8,6 +8,11 @@
     <body>
 	<div class="container">
 	    <div class="playlist-control">
+		<div class="controls">
+		    <input type="text" id="message-text" placeholder="Your Message">
+		    <button class="control-button" id="message-button">Display</button>
+		</div>
+
 		<p>
 		Add your URL:  <input type="text" id="media-url">
 		</p>
@@ -301,6 +306,22 @@
 		 document.getElementById("media-url").value = "";
 		 updatePlayList()
 	     })
+	 });
+
+	 document.getElementById('message-button').addEventListener('click', () => {
+	     var url = document.getElementById("message-text").value;
+	     if (url.trim() === "") {
+		 fetch("/message", {
+		     method: "post"
+		 })
+	     } else {
+		 fetch("/message?"+url, {
+		     method: "post"
+		 }).then(res => {
+		     document.getElementById("message-text").value = "";
+		     updatePlayList()
+		 })
+	     }
 	 });
 	 document.getElementById('stop-button').addEventListener('click', () => {
 	     fetch("/stop", {

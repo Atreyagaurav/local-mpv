@@ -23,7 +23,7 @@ struct Args {
     #[arg(short, long, default_value = "6780")]
     port: u16,
     /// Display QR code for URL
-    #[arg(short, long, requires = "server")]
+    #[arg(short, long)]
     qr: bool,
     /// Files to play by MPV
     files: Vec<PathBuf>,
@@ -101,7 +101,12 @@ fn main() -> libmpv::Result<()> {
             let ev = ev_ctx.wait_event(600.).unwrap_or(Err(libmpv::Error::Null));
             match ev {
                 Ok(Event::Shutdown) => {
-                    exit(0);
+                    exit(0)
+                    // override shutdown to just clear the playlist and wait
+                    // BUG: in i3 the window persists untill workspace is changed
+                    // if mpv.playlist_clear().is_ok() {
+                    //     _ = mpv.playlist_remove_current();
+                    // }
                 }
                 _ => (),
             }
@@ -302,6 +307,16 @@ fn handle_mpv_command(stream: &mut TcpStream, path: String, mpv: &Mpv) {
         "stop" => {
             if mpv.playlist_clear().is_ok() {
                 _ = mpv.playlist_remove_current();
+                serve_text(stream, "SUCCESS", None);
+            }
+        }
+        "message" => {
+            let msg = urlencoding::decode(url.query().unwrap_or_default());
+            let msg = msg
+                .as_ref()
+                .map(|s| s.trim())
+                .unwrap_or("*Invalid UTF-8 Message*");
+            if mpv.set_property("osd-msg1", msg).is_ok() {
                 serve_text(stream, "SUCCESS", None);
             }
         }
